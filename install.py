@@ -15,10 +15,6 @@ def run(cmd, cwd=None, env=None):
         print(f"WARNING: Command exited with code {result.returncode}")
     return result.returncode
 
-
-# ═══════════════════════════════════════════
-#  GVHMR Installation
-# ═══════════════════════════════════════════
 def install_gvhmr():
     if os.path.isdir(GVHMR_DIR):
         print(f"[GVHMR] Already exists at {GVHMR_DIR}, skipping install.")
@@ -26,27 +22,14 @@ def install_gvhmr():
 
     print("=== Installing GVHMR ===")
 
-    # 1. Clone the repo
     run("git clone https://github.com/zju3dv/GVHMR", cwd=HOME)
 
-    # 2. Create conda env and install deps
     run("conda create -y -n gvhmr python=3.10", cwd=GVHMR_DIR)
     conda_run = "conda run -n gvhmr --no-capture-output"
 
     run(f"{conda_run} pip install -r requirements.txt", cwd=GVHMR_DIR)
     run(f"{conda_run} pip install -e .", cwd=GVHMR_DIR)
 
-    # 3. Install DPVO (optional, for moving camera)
-    dpvo_dir = os.path.join(GVHMR_DIR, "third-party", "DPVO")
-    if os.path.isdir(dpvo_dir):
-        run("wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip", cwd=dpvo_dir)
-        run("unzip eigen-3.4.0.zip -d thirdparty && rm -rf eigen-3.4.0.zip", cwd=dpvo_dir)
-        run(f'{conda_run} pip install torch-scatter -f "https://data.pyg.org/whl/torch-2.3.0+cu121.html"', cwd=dpvo_dir)
-        run(f"{conda_run} pip install numba pypose", cwd=dpvo_dir)
-        cuda_env = "CUDA_HOME=/usr/local/cuda-12.1 PATH=$PATH:/usr/local/cuda-12.1/bin"
-        run(f"{cuda_env} {conda_run} pip install -e .", cwd=dpvo_dir)
-
-    # 4. Create checkpoint directories
     ckpt_dir = os.path.join(GVHMR_DIR, "inputs", "checkpoints")
     os.makedirs(ckpt_dir, exist_ok=True)
 
@@ -62,9 +45,6 @@ def install_gvhmr():
     print("               hmr2/epoch=10-step=25000.ckpt, vitpose/vitpose-h-multi-coco.pth, yolo/yolov8x.pt")
 
 
-# ═══════════════════════════════════════════
-#  GMR Installation
-# ═══════════════════════════════════════════
 def install_gmr():
     if os.path.isdir(GMR_DIR):
         print(f"[GMR] Already exists at {GMR_DIR}, skipping install.")
@@ -72,20 +52,14 @@ def install_gmr():
 
     print("\n=== Installing GMR ===")
 
-    # 1. Clone the repo
     run("git clone https://github.com/YanjieZe/GMR", cwd=HOME)
 
-    # 2. Create conda env
     run("conda create -y -n gmr python=3.10", cwd=GMR_DIR)
     conda_run = "conda run -n gmr --no-capture-output"
 
-    # 3. Install GMR
     run(f"{conda_run} pip install -e .", cwd=GMR_DIR)
 
-    # 4. Fix rendering issues
     run(f"{conda_run} conda install -c conda-forge libstdcxx-ng -y", cwd=GMR_DIR)
-
-    # 5. Create body model directory
     body_model_dir = os.path.join(GMR_DIR, "assets", "body_models", "smplx")
     os.makedirs(body_model_dir, exist_ok=True)
 
