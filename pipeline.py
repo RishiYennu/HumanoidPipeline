@@ -64,7 +64,7 @@ def generate_human_image(robot_image : str):
 
 def generate_video(human_image : str): 
   # Edit video prompt in the below file
-  image_file = client.files.upload(file="human_video_image.png")
+  image_file = client.files.upload(file=human_image)
 
   operation = client.models.generate_videos(
       model="veo-2.0-generate-001",
@@ -117,6 +117,7 @@ def motion_retargeting(input_video_dir):
   )
 
   print(f"\nDone! Output saved to: {save_path}")
+
 
 
 
