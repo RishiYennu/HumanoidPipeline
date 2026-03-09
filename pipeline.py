@@ -26,7 +26,7 @@ def run(cmd, cwd=None, env=None):
 def main():
   args = sys.argv[1:]
 
-  if len(args) > 1:
+  if len(args) > 1 or len(args) == 0:
     print("The command for running the script is: python pipeline.py [simulation image]")
     return
   
@@ -45,7 +45,7 @@ def generate_human_image(robot_image : str):
   img = Image.open(robot_image)
 
   response = client.models.generate_content(
-      model="gemini-3-pro-image-preview",
+      model="gemini-2.0-flash-exp-image-generation",
       contents=[image_prompt.read(), img],
       config=types.GenerateContentConfig(
           response_modalities=["TEXT", "IMAGE"],
@@ -60,35 +60,58 @@ def generate_human_image(robot_image : str):
       elif part.text:
           print(part.text)
   
-  return "human_video_image.png"
+  return "output/human_video_image.png"
 
 def generate_video(human_image : str): 
-  # Edit video prompt in the below file
-  image_file = client.files.upload(file=human_image)
-
+  with open(human_image, "rb") as f:
+      image_bytes = f.read()
+  
+  image = types.Image(
+      image_bytes=image_bytes,
+      mime_type="image/png",
+  )
+  
   operation = client.models.generate_videos(
-      model="veo-2.0-generate-001",
-      image=image_file,
+      model="veo-3.0-generate-001",
+      image=image,
+      prompt="Describe the motion/animation you want",
       config=types.GenerateVideosConfig(
-          prompt="Describe the motion/animation you want",  
           number_of_videos=1,
-          duration_seconds=5, 
+          duration_seconds=8, 
           negative_prompt="blurry, low quality",  
       ),
   )
+  
+  # Try both response and result
   while not operation.done:
       time.sleep(10)
       operation = client.operations.get(operation)
-
-  for video in operation.result.generated_videos:
-      client.files.download(file=video.video, download_path=f"output/output.mp4")
-      print(f"Saved output.mp4")
-
+  
+  # Try both response and result
+  generated = None
+  if operation.response and operation.response.generated_videos:
+      generated = operation.response.generated_videos
+  elif operation.result and operation.result.generated_videos:
+      generated = operation.result.generated_videos
+  
+  if not generated:
+      print("Video generation failed - no videos returned")
+      print(f"Operation: {operation}")
+      return
+  
+  client.files.download(file=generated[0].video)
+  generated[0].video.save("output/output.mp4")
+  print("Saved output.mp4")
+  
 
 def motion_retargeting(input_video_dir):
   if not (os.path.isdir(GVHMR_DIR) and os.path.isdir(GMR_DIR)):
     print("Please run the [install.py] file to install GVHMR and GMR in order to perform the retargeting")
-
+    return
+  
+  # Convert to absolute path so it works from any cwd
+  input_video_dir = os.path.abspath(input_video_dir)
+  
   video_name = os.path.splitext(os.path.basename(input_video_dir))[0]
 
   conda_gvhmr = "conda run -n gvhmr --no-capture-output"
